@@ -4,475 +4,684 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CoherentHand: Temporally Consistent 3D Hand Trajectory Synthesis with Semantic Motion Priors</title>
+  <meta name="description" content="CoherentHand: VLM-guided RVQ codebook and flow-based decoder for temporally consistent 3D hand trajectory synthesis.">
   <style>
     :root {
       --fg: #1a1a1a;
       --muted: #555;
+      --soft: #888;
       --accent: #2a5db0;
-      --bg: #fafafa;
-      --card-bg: #ffffff;
-      --border: #e1e4e8;
+      --accent-soft: #e6efff;
+      --bg: #ffffff;
+      --card: #ffffff;
+      --border: #e5e5e5;
+      --max-w: 960px;
     }
-    
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       background: var(--bg);
       color: var(--fg);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       line-height: 1.6;
     }
-    
-    main {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 60px 24px;
-    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    main { max-width: var(--max-w); margin: 0 auto; padding: 64px 24px 80px; }
 
-    header {
-      text-align: center;
-      margin-bottom: 48px;
+    /* ---------- Header ---------- */
+    header { text-align: center; margin-bottom: 48px; }
+    .venue {
+      display: inline-block;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 24px;
     }
-    
     h1 {
-      font-size: 38px;
-      font-weight: 700;
+      font-size: 36px;
+      font-weight: 600;
       line-height: 1.2;
-      margin: 0 0 24px;
-      letter-spacing: -0.02em;
+      margin: 0 0 28px;
+      letter-spacing: -0.01em;
     }
-    
     .authors {
       font-size: 18px;
       color: var(--muted);
       line-height: 1.7;
-      margin-bottom: 8px;
+      margin: 0 0 12px;
     }
-    
     .authors a {
       color: var(--fg);
-      text-decoration: none;
       border-bottom: 1px solid transparent;
       transition: border-color 0.15s;
     }
-    
-    .authors a:hover {
-      border-bottom-color: var(--accent);
-    }
-    
+    .authors a:hover { border-bottom-color: var(--accent); text-decoration: none; }
     .affiliation {
       font-size: 16px;
       color: var(--muted);
-      margin: 12px 0 24px;
+      margin: 0 0 28px;
+      font-style: italic;
     }
+    .corresp { font-size: 14px; color: var(--soft); margin: -16px 0 28px; }
 
-    .links {
-      margin-top: 24px;
+    /* ---------- Action buttons ---------- */
+    .actions {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
-      gap: 16px;
+      gap: 10px;
+      margin-top: 8px;
     }
-
     .btn {
       display: inline-flex;
       align-items: center;
-      padding: 10px 20px;
-      background: #24292e;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 30px;
-      font-weight: 500;
+      gap: 8px;
+      background: var(--fg);
+      color: #fff !important;
+      padding: 10px 18px;
+      border-radius: 999px;
       font-size: 15px;
-      transition: background 0.2s;
+      font-weight: 500;
+      transition: transform 0.1s, background 0.15s;
     }
+    .btn:hover { background: #000; text-decoration: none; transform: translateY(-1px); }
+    .btn svg { width: 16px; height: 16px; }
+    .btn.btn-disabled { opacity: 0.55; cursor: default; }
+    .btn.btn-disabled:hover { background: var(--fg); transform: none; }
 
-    .btn:hover {
-      background: var(--accent);
-    }
-
-    .btn-secondary {
-      background: #e1e4e8;
-      color: #24292e;
-    }
-
-    .btn-secondary:hover {
-      background: #d1d5da;
-    }
-    
-    section {
-      margin: 56px 0;
-      text-align: left;
-    }
-
+    /* ---------- Sections ---------- */
+    section { margin: 64px 0; }
     h2 {
       font-size: 24px;
       font-weight: 600;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
-      margin-bottom: 20px;
+      margin: 0 0 20px;
+      letter-spacing: -0.005em;
     }
-
-    p {
-      color: #333;
-      font-size: 16px;
-      text-align: justify;
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 28px 0 8px;
     }
+    p { margin: 0 0 14px; color: #222; }
 
-    .img-container {
-      text-align: center;
-      margin: 32px 0;
-      background: var(--card-bg);
-      padding: 16px;
+    /* ---------- Figure ---------- */
+    figure { margin: 0; }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
       border-radius: 8px;
       border: 1px solid var(--border);
+      background: var(--card);
     }
-
-    .img-container img {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .caption {
+    figcaption {
       font-size: 14px;
       color: var(--muted);
       margin-top: 12px;
-      text-align: left;
-      line-height: 1.4;
+      text-align: center;
+      line-height: 1.5;
     }
+    figcaption strong { color: var(--fg); }
 
-    ul {
-      padding-left: 20px;
+    /* ---------- Abstract card ---------- */
+    .abstract {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 28px 32px;
+      border-radius: 12px;
     }
+    .abstract p { margin: 0; text-align: justify; }
 
-    li {
-      margin-bottom: 8px;
-      color: #333;
-    }
-
-    .table-container {
+    /* ---------- Results table ---------- */
+    .table-wrap {
       overflow-x: auto;
-      margin: 24px 0;
       border: 1px solid var(--border);
       border-radius: 8px;
-      background: var(--card-bg);
+      background: var(--card);
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    th { background: #f4f4f4; font-weight: 600; }
+    th:first-child, td:first-child { text-align: left; }
+    tr:last-child td { border-bottom: 0; }
+    .ours td { background: #f6faff; font-weight: 600; }
+    .best { font-weight: 700; }
+
+    /* ---------- Embed (shared) ---------- */
+    .embed {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;        /* 16:9 */
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+    .embed video,
+    .embed iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: 0;
+    }
+
+    /* ---------- Slider ---------- */
+    .slider {
+      position: relative;
+      user-select: none;
+    }
+    .slider-viewport {
+      overflow: hidden;
+      border-radius: 8px;
+    }
+    .slider-track {
+      display: flex;
+      transition: transform 0.45s cubic-bezier(.4,.0,.2,1);
+      will-change: transform;
+    }
+    .slide {
+      flex: 0 0 100%;
+      min-width: 0;
+      padding: 0 2px;
+    }
+    .slide-caption {
+      font-size: 15px;
+      color: var(--muted);
+      margin: 14px 4px 0;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .slide-caption strong { color: var(--fg); }
+
+    .slider-btn {
+      position: absolute;
+      top: 0;
+      height: 0;
+      padding-top: 28.125%;        /* half of 56.25% — pins to embed center */
+      width: 44px;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .slider-btn::before {
+      content: "";
+      position: absolute;
+      top: calc(28.125% - 22px);
+      left: 0;
+      width: 44px; height: 44px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.55);
+      transition: background 0.15s, transform 0.1s;
+    }
+    .slider-btn:hover::before { background: rgba(0,0,0,0.8); }
+    .slider-btn:active::before { transform: scale(0.94); }
+    .slider-btn svg {
+      position: relative;
+      z-index: 1;
+      width: 20px; height: 20px;
+      color: #fff;
+      margin-top: calc(28.125% - 22px + 12px);
+      margin-left: 12px;
+    }
+    .slider-btn.prev { left: 8px; }
+    .slider-btn.next { right: 8px; }
+    .slider-btn[disabled] { opacity: 0.35; cursor: default; }
+    .slider-btn[disabled]:hover::before { background: rgba(0,0,0,0.55); }
+
+    .slider-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .slider-dots button {
+      width: 8px; height: 8px;
+      border-radius: 999px;
+      border: 0;
+      background: #cfcfcf;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .slider-dots button[aria-current="true"] {
+      background: var(--accent);
+      transform: scale(1.25);
+    }
+
+    /* ---------- BibTeX ---------- */
+    pre.bib {
+      background: #f4f4f4;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #222;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--soft);
       text-align: center;
     }
 
-    th, td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    th {
-      background: #f1f3f5;
-      font-weight: 600;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .highlight {
-      font-weight: bold;
-      background-color: #f0f7ff;
-    }
-
-    pre {
-      background: #24292e;
-      color: #f6f8fa;
-      padding: 18px;
-      border-radius: 8px;
-      overflow-x: auto;
-      text-align: left;
-      font-size: 14px;
-    }
-    
-    @media (max-width: 768px) {
-      main { padding: 40px 16px; }
-      h1 { font-size: 28px; }
+    @media (max-width: 600px) {
+      main { padding: 40px 18px 60px; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 20px; }
       .authors { font-size: 16px; }
-      .links { flex-direction: column; align-items: center; gap: 10px; }
-      .btn { width: 80%; justify-content: center; }
+      .abstract { padding: 22px; }
+      .slider-btn { width: 36px; }
+      .slider-btn::before { width: 36px; height: 36px; top: calc(28.125% - 18px); }
+      .slider-btn svg { margin-top: calc(28.125% - 18px + 8px); margin-left: 8px; }
     }
   </style>
 </head>
 <body>
 
 <main>
+
+  <!-- ============ HEADER ============ -->
   <header>
+    <span class="venue">CVPR Findings 2026</span>
+
     <h1>CoherentHand: Temporally Consistent 3D Hand Trajectory Synthesis with Semantic Motion Priors</h1>
 
     <p class="authors">
       <a href="#">Bikram Boote</a><sup>1</sup>,&nbsp;
       <a href="#">Junho Kim</a><sup>1</sup>,&nbsp;
       <a href="#">Ozgur Kara</a><sup>1</sup>,&nbsp;
-      <a href="#">Sangmin Lee</a><sup>2</sup>,&nbsp;
-      <a href="#">James M. Rehg</a><sup>1</sup>
+      <a href="#">Sangmin Lee</a><sup>2†</sup>,&nbsp;
+      <a href="#">James M. Rehg</a><sup>1†</sup>
     </p>
 
     <p class="affiliation">
       <sup>1</sup>University of Illinois Urbana-Champaign &nbsp;·&nbsp;
       <sup>2</sup>Korea University
     </p>
+    <p class="corresp"><sup>†</sup>Corresponding authors</p>
 
-    <div class="links">
-      <a href="#" class="btn">📄 Paper (ArXiv)</a>
-      <a href="https://github.com/coherenthand/coherenthand.github.io" class="btn btn-secondary">💻 Code (Coming Soon)</a>
+    <div class="actions">
+      <span class="btn btn-disabled" aria-label="arXiv coming soon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg> arXiv (coming soon)
+      </span>
+      <span class="btn btn-disabled" aria-label="Code coming soon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/>
+          <polyline points="8 6 2 12 8 18"/>
+        </svg> Code (coming soon)
+      </span>
     </div>
   </header>
 
-  <section id="abstract">
+  <!-- ============ TEASER ============ -->
+  <section>
+    <figure>
+      <img src="static/images/teaser.png" alt="CoherentHand teaser figure">
+      <figcaption>
+        <strong>Hand-Object Interaction Synthesis.</strong>
+        Standard VQ + Transformer generators (top) rely on generic motion priors,
+        yielding coarse and temporally inconsistent trajectories. CoherentHand (bottom) couples a
+        VLM-guided tokenization with a flow-based generator, producing fine-grained
+        finger articulation and smooth 3D hand interactions.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ ABSTRACT ============ -->
+  <section>
     <h2>Abstract</h2>
+    <div class="abstract">
+      <p>
+        Understanding 3D hand motion from visual and linguistic cues is crucial for modeling
+        Human–Object Interaction (HOI). Current state-of-the-art 3D HOI generation frameworks
+        suffer from two key limitations: (1) methods for learning hand-motion priors fail to capture
+        subtle, object-specific finger articulation, and (2) discretized motion generators produce
+        jerky, physically implausible motion trajectories. We introduce <strong>CoherentHand</strong>,
+        a unified and object-model-free framework that addresses these limitations to achieve robust
+        and fluid 3D hand trajectory estimation. Our approach introduces two key innovations.
+        First, we propose a <em>VLM-guided Residual Vector-Quantized (RVQ) codebook</em> that
+        leverages intermediate Vision-Language Model representations to infuse high-level affordance
+        and articulation cues directly into the motion priors, ensuring fine-grained semantic alignment
+        with the visual context. Second, we employ a <em>flow-based decoder</em> conditioned on this
+        enriched codebook to generate continuous 3D hand pose sequences, thereby overcoming the
+        temporal noise artifacts inherent in discrete token prediction. Evaluated across challenging
+        forecasting and interpolation tasks on the HoloAssist and ARCTIC datasets, CoherentHand
+        establishes new state-of-the-art performance across four generalization settings, demonstrating
+        high fidelity in terms of finger articulation and trajectory fluency.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ METHOD ============ -->
+  <section>
+    <h2>Method</h2>
     <p>
-      Understanding 3D hand motion from visual and linguistic cues is crucial for modeling Human-Object Interaction (HOI). Current state-of-the-art 3D HOI generation frameworks suffer from two key limitations: 1) Methods for learning hand-motion priors fail to capture subtle, object-specific finger articulation; and 2) Discretized motion generators produce jerky, physically implausible motion trajectories. We introduce <strong>CoherentHand</strong>, a unified and object-model-free framework that addresses these critical limitations to achieve robust and fluid 3D hand trajectory estimation.
+      CoherentHand predicts a continuous, semantically grounded 3D hand trajectory from a single
+      object image, an action prompt, and an initial 3D contact point, in two complementary stages.
     </p>
+    <figure>
+      <img src="static/images/method.png" alt="CoherentHand method overview">
+      <figcaption>
+        <strong>Method overview.</strong>
+        (a) <em>Stage 1 — VLM-guided RVQ codebook.</em> A transformer encoder maps the
+        hand–object sequence into latent features, discretized through multi-level residual
+        quantization. A frozen VLM provides affordance-aware guidance; its intermediate
+        representations are fused into the detokenization process via cross-attention.
+        (b) <em>Stage 2 — Flow-based trajectory generator.</em> A rectified-flow decoder transforms
+        noise into 3D hand poses conditioned on the VLM-guided codebook, the image, the action
+        prompt, and the contact point, naturally enforcing temporal smoothness.
+      </figcaption>
+    </figure>
+
+    <h3>VLM-guided discrete representation</h3>
     <p>
-      Our approach introduces two key innovations: First, we propose a VLM-guided Residual Vector-Quantized (RVQ) codebook that leverages intermediate Vision-Language Model (VLM) representations to infuse high-level affordance and articulation cues directly into the motion priors, ensuring fine-grained semantic alignment with the visual context. Second, we employ a flow-based decoder conditioned on this enriched codebook to generate continuous 3D hand pose sequences, thereby overcoming the temporal noise artifacts inherent in discrete token prediction. Evaluated across challenging forecasting and interpolation tasks on the HoloAssist and ARCTIC datasets, CoherentHand establishes new state-of-the-art performance across four generalization settings, demonstrating high fidelity in terms of finger articulation and trajectory fluency.
+      We learn a residual vector-quantized codebook with <em>L = 6</em> quantizers and
+      <em>K = 512</em> entries of dimension <em>E = 512</em>. A single-head cross-attention module
+      uses VLM features as queries and the codebook / video / action / contact features as
+      keys/values, so the VLM's high-level semantics act as a selective filter over the input
+      modalities during reconstruction.
+    </p>
+
+    <h3>Flow-based decoder</h3>
+    <p>
+      A conditional Rectified Flow decoder learns a straight-line velocity field from a Gaussian
+      prior to the ground-truth trajectory. Conditioning is built from the codebook latent and
+      the input modalities, then enriched with two VLM latent streams (hand-articulation and
+      hand–object contact) via dedicated cross-attention modules.
     </p>
   </section>
 
-  <section id="contributions">
-    <h2>Key Contributions</h2>
-    <ul>
-      <li><strong>Unified Framework:</strong> Highly precise and temporally coherent 3D hand interaction trajectory estimation conditioned on a single image and action prompt without requiring explicit 3D object models at inference.</li>
-      <li><strong>VLM-Guided RVQ Codebook:</strong> Uses intermediate VLM representations to infuse high-level affordance and articulation cues during detokenization, achieving fine-grained semantic alignment.</li>
-      <li><strong>Flow-Based Trajectory Generator:</strong> Decodes discrete tokens into continuous 3D hand pose sequences, effectively overcoming the frame-level noise artifacts inherent in discrete token-prediction models.</li>
-      <li><strong>State-of-the-Art Performance:</strong> Achieves superior fidelity and fluency on the rigorous HoloAssist and ARCTIC benchmarks across multiple structural generalization settings.</li>
-    </ul>
-  </section>
-
-  <section id="method">
-    <h2>Method Overview</h2>
+  <!-- ============ VIDEO EXAMPLES ============ -->
+  <section id="video-examples">
+    <h2>Video Examples</h2>
     <p>
-      The architecture operates in two complementary stages that work in synergy to achieve object-conditioned, temporally smooth motion generation:
+      Predicted 3D hand trajectories across different generalization settings.
+      Use the arrows or the dots below to switch between examples.
     </p>
-    
-    <div class="img-container">
-      <img src="CoherentHand-CameraReady_page1_fig1.png" alt="CoherentHand Framework Overview">
-      <div class="caption">
-        <strong>Figure 1: Hand-Object Interaction Synthesis.</strong> Top row: Standard VQ representations with Transformer generators rely on generic motion priors, leading to coarse and inconsistent trajectories. Bottom row: <strong>CoherentHand</strong> introduces VLM-guided tokenization and a flow-based generator for fine-grained and smooth 3D hand interactions.
+
+    <div class="slider" id="video-slider" aria-roledescription="carousel">
+      <button class="slider-btn prev" aria-label="Previous example">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <div class="slider-viewport">
+        <div class="slider-track">
+
+          <div class="slide" data-label="Slide Joy-Con Controller">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/slide_joycon.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Slide Joy-Con Controller</strong>
+            </p>
+          </div>
+
+          <div class="slide" data-label="Open Battery Door">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/open_batterydoor.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Open Battery Door</strong>
+            </p>
+          </div>
+
+          <div class="slide" data-label="Align SD Card">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/align_sdcard.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Align SD Card</strong>
+            </p>
+          </div>
+
+          <div class="slide" data-label="Grab Lever (Nespresso)">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/grab_lever.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Grab Lever (Nespresso)</strong>
+            </p>
+          </div>
+
+          <div class="slide" data-label="Hold Remote (ATV)">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/hold_remote.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Hold Remote (ATV)</strong>
+            </p>
+          </div>
+
+          <div class="slide" data-label="Lift Cable (Circuit Breaker)">
+            <div class="embed">
+              <video controls preload="metadata" playsinline>
+                <source src="static/videos/lift_cable.mp4" type="video/mp4">
+              </video>
+            </div>
+            <p class="slide-caption">
+              <strong>Lift Cable (Circuit Breaker)</strong>
+            </p>
+          </div>
+
+        </div>
       </div>
-    </div>
 
-    <div class="img-container">
-      <img src="CoherentHand-CameraReady_page4_fig2.png" alt="Detailed Pipeline Stages">
-      <div class="caption">
-        <strong>Figure 2: Method Pipeline Architecture.</strong> 
-        (a) <strong>Stage 1:</strong> Learning a VLM-guided RVQ codebook by reconstructing 3D hand interaction trajectories using high-level semantics from a large Vision-Language Model. 
-        (b) <strong>Stage 2:</strong> A flow-based decoder is conditioned on the codebook and other multi-modal inputs (image, text, and contact indicators) to generate fluid final trajectories.
-      </div>
+      <button class="slider-btn next" aria-label="Next example">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div class="slider-dots" role="tablist"></div>
     </div>
   </section>
 
-  <section id="results">
-    <h2>Quantitative Results</h2>
-    
-    <h3>1. Generalization Evaluation on HoloAssist</h3>
+  <!-- ============ RESULTS ============ -->
+  <section>
+    <h2>Results</h2>
     <p>
-      Performance comparison measuring Mean Per Joint Position Error (MPJPE in cm) across four challenging generalization categories. Lower numbers indicate better accuracy.
+      CoherentHand achieves new state-of-the-art across all four generalization splits of
+      HoloAssist (task / object / action / scene), under both forecasting and interpolation,
+      with or without the hand visible in the input.
     </p>
-    
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th rowspan="2">Method (Hand Visible Setup)</th>
-            <th colspan="2">Task-level (cm)</th>
-            <th colspan="2">Object-level (cm)</th>
-            <th colspan="2">Action-level (cm)</th>
-            <th colspan="2">Scene-level (cm)</th>
-          </tr>
-          <tr>
-            <th>MPJPE</th>
-            <th>MPJPE-PA</th>
-            <th>MPJPE</th>
-            <th>MPJPE-PA</th>
-            <th>MPJPE</th>
-            <th>MPJPE-PA</th>
-            <th>MPJPE</th>
-            <th>MPJPE-PA</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="9" style="text-align:left; font-weight:bold; background:#f8f9fa;">Forecasting Task</td>
-          </tr>
-          <tr>
-            <td>HCTFormer [17]</td>
-            <td>8.32</td>
-            <td>3.06</td>
-            <td>8.70</td>
-            <td>3.19</td>
-            <td>8.59</td>
-            <td>3.25</td>
-            <td>8.52</td>
-            <td>3.09</td>
-          </tr>
-          <tr>
-            <td>HCTDiff [42]</td>
-            <td>8.42</td>
-            <td>2.75</td>
-            <td>9.01</td>
-            <td>2.88</td>
-            <td>9.11</td>
-            <td>3.10</td>
-            <td>9.49</td>
-            <td>2.84</td>
-          </tr>
-          <tr>
-            <td>LatentAct [33]</td>
-            <td>7.61</td>
-            <td>2.99</td>
-            <td>8.09</td>
-            <td>3.06</td>
-            <td>8.14</td>
-            <td>3.32</td>
-            <td>7.87</td>
-            <td>3.04</td>
-          </tr>
-          <tr class="highlight">
-            <td>CoherentHand (Ours)</td>
-            <td>6.76</td>
-            <td>2.72</td>
-            <td>7.09</td>
-            <td>2.75</td>
-            <td>6.88</td>
-            <td>2.82</td>
-            <td>7.61</td>
-            <td>2.88</td>
-          </tr>
-          <tr>
-            <td colspan="9" style="text-align:left; font-weight:bold; background:#f8f9fa;">Interpolation Task</td>
-          </tr>
-          <tr>
-            <td>LatentAct [33]</td>
-            <td>6.72</td>
-            <td>2.87</td>
-            <td>7.48</td>
-            <td>3.02</td>
-            <td>7.25</td>
-            <td>3.19</td>
-            <td>7.27</td>
-            <td>2.93</td>
-          </tr>
-          <tr class="highlight">
-            <td>CoherentHand (Ours)</td>
-            <td>5.91</td>
-            <td>2.61</td>
-            <td>6.03</td>
-            <td>2.64</td>
-            <td>5.67</td>
-            <td>2.75</td>
-            <td>6.55</td>
-            <td>2.75</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
 
-    <h3>2. Cross-Dataset Validation on ARCTIC</h3>
-    <div class="table-container" style="max-width: 600px; margin: 0 auto 24px;">
+    <h3>HoloAssist — task-level generalization (cm, lower is better)</h3>
+    <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Method</th>
-            <th>MPJPE ↓</th>
-            <th>MPJPE-PA ↓</th>
-            <th>MPJPE-FA ↓</th>
+            <th>Forecast MPJPE&darr;</th>
+            <th>Forecast MPJPE-PA&darr;</th>
+            <th>Interp. MPJPE&darr;</th>
+            <th>Interp. MPJPE-PA&darr;</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>HCTFormer [17]</td>
-            <td>15.76</td>
-            <td class="highlight">3.61</td>
-            <td>—</td>
-          </tr>
-          <tr>
-            <td>LatentAct [33]</td>
-            <td>14.77</td>
-            <td>3.76</td>
-            <td>18.75</td>
-          </tr>
-          <tr class="highlight">
-            <td>CoherentHand (Ours)</td>
-            <td>11.77</td>
-            <td>3.63</td>
-            <td>15.52</td>
+          <tr><td>HCTFormer</td><td>8.32</td><td>3.06</td><td>7.52</td><td>3.02</td></tr>
+          <tr><td>HCTDiff</td><td>8.42</td><td>2.75</td><td>8.30</td><td>2.72</td></tr>
+          <tr><td>LatentAct</td><td>7.61</td><td>2.99</td><td>6.72</td><td>2.87</td></tr>
+          <tr class="ours">
+            <td>CoherentHand (ours)</td>
+            <td class="best">6.76</td>
+            <td class="best">2.72</td>
+            <td class="best">5.91</td>
+            <td class="best">2.61</td>
           </tr>
         </tbody>
       </table>
     </div>
-
-    <h3>3. Decoder Architecture & VLM Guidance Ablation</h3>
-    <p>
-      Evaluating the structural improvements driven by continuous flow-based modeling vs. traditional discrete Transformer decoders:
+    <p style="font-size:14px;color:var(--muted);margin-top:10px;">
+      Hand-visible setting, task-level split. See the paper for the full
+      hand-visible × no-hand × four-split breakdown.
     </p>
-    <div class="table-container" style="max-width: 700px; margin: 0 auto;">
+
+    <h3>Cross-dataset generalization on ARCTIC</h3>
+    <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th rowspan="2">Decoder Architecture Type</th>
-            <th colspan="2">w/o VLM-latent Cues</th>
-            <th colspan="2">w/ VLM-latent Cues</th>
-          </tr>
-          <tr>
-            <th>MPJPE (cm)</th>
-            <th>MPJPE-PA (cm)</th>
-            <th>MPJPE (cm)</th>
-            <th>MPJPE-PA (cm)</th>
+            <th>Method</th>
+            <th>MPJPE&darr;</th>
+            <th>MPJPE-PA&darr;</th>
+            <th>MPJPE-FA&darr;</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Transformer Decoder</td>
-            <td>7.43</td>
-            <td>2.81</td>
-            <td>7.30</td>
-            <td>2.78</td>
-          </tr>
-          <tr class="highlight">
-            <td>Flow-based Decoder (Ours)</td>
-            <td>6.92</td>
-            <td>2.77</td>
-            <td>6.76</td>
-            <td>2.72</td>
+          <tr><td>HCTFormer</td><td>15.76</td><td class="best">3.61</td><td>&mdash;</td></tr>
+          <tr><td>LatentAct</td><td>14.77</td><td>3.76</td><td>18.75</td></tr>
+          <tr class="ours">
+            <td>CoherentHand (ours)</td>
+            <td class="best">11.77</td>
+            <td>3.63</td>
+            <td class="best">15.52</td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <section id="visualizations">
-    <h2>Qualitative Visualizations</h2>
-    <p>
-      As demonstrated below, the trajectories generated by CoherentHand contain much more fine-grained structural fidelity in hand orientations and individual finger articulations than the baseline.
-    </p>
-    <div class="img-container">
-      <img src="CoherentHand-CameraReady_page8_fig3.png" alt="Qualitative Results Comparison">
-      <div class="caption">
-        <strong>Figure 3: Qualitative Generations.</strong> Comparisons between Ground Truth (GT), LatentAct, and CoherentHand (Ours) across tasks such as <em>"Flip Joy-Con Controller"</em>, <em>"Open Battery Door"</em>, and <em>"Rotate Nintendo Switch"</em> viewed from both the camera frame and alternative angles.
-      </div>
-    </div>
+  <!-- ============ QUALITATIVE ============ -->
+  <section>
+    <h2>Qualitative results</h2>
+    <figure>
+      <img src="static/images/qualitative.png" alt="Qualitative comparison with LatentAct">
+      <figcaption>
+        <strong>Qualitative comparison.</strong> Hand-pose generations vs. LatentAct on the
+        forecasting task across different generalization settings, shown at three points along the
+        sequence in two camera views together with the centroid trajectory. CoherentHand produces
+        noticeably more faithful finger articulation and orientation.
+      </figcaption>
+    </figure>
   </section>
 
-  <section id="citation">
-    <h2>BibTeX Citation</h2>
-    <pre><code>@inproceedings{boote2026coherenthand,
-  title={CoherentHand: Temporally Consistent 3D Hand Trajectory Synthesis with Semantic Motion Priors},
-  author={Boote, Bikram and Kim, Junho and Kara, Ozgur and Lee, Sangmin and Rehg, James M.},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-  year={2026}
-}</code></pre>
+  <!-- ============ BIBTEX ============ -->
+  <section>
+    <h2>BibTeX</h2>
+<pre class="bib">TBD</pre>
   </section>
+
+  <!-- ============ ACKNOWLEDGMENTS ============ -->
+  <section>
+    <h2>Acknowledgments</h2>
+    <p>
+      This work was supported in part by the NRF grant funded by the Korean government (MSIT)
+      (RS-2025-00563942) and the IITP grant funded by the Korean government (MSIT)
+      (IITP-2026-RS-2020-II201819, 10%).
+    </p>
+  </section>
+
+  <footer>
+    Page template inspired by the academic project-page convention.
+  </footer>
+
 </main>
+
+<script>
+(() => {
+  const slider   = document.getElementById('video-slider');
+  if (!slider) return;
+  const track    = slider.querySelector('.slider-track');
+  const slides   = Array.from(slider.querySelectorAll('.slide'));
+  const prevBtn  = slider.querySelector('.slider-btn.prev');
+  const nextBtn  = slider.querySelector('.slider-btn.next');
+  const dotsWrap = slider.querySelector('.slider-dots');
+
+  let index = 0;
+  const wrap = false;   // set true if you'd rather have it loop
+
+  // Build dots
+  slides.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-label', s.dataset.label || `Slide ${i + 1}`);
+    b.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function pauseAllVideos() {
+    slider.querySelectorAll('video').forEach(v => { try { v.pause(); } catch {} });
+  }
+
+  function update() {
+    track.style.transform = `translateX(-${index * 100}%)`;
+    dots.forEach((d, i) => d.setAttribute('aria-current', i === index ? 'true' : 'false'));
+    if (!wrap) {
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === slides.length - 1;
+    }
+  }
+
+  function goTo(i) {
+    if (wrap) index = (i + slides.length) % slides.length;
+    else      index = Math.max(0, Math.min(slides.length - 1, i));
+    pauseAllVideos();
+    update();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(index - 1));
+  nextBtn.addEventListener('click', () => goTo(index + 1));
+
+  // Keyboard arrows when the slider has focus
+  slider.tabIndex = 0;
+  slider.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); goTo(index - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); goTo(index + 1); }
+  });
+
+  // Touch swipe
+  let touchX = null;
+  slider.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, {passive: true});
+  slider.addEventListener('touchend', e => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1));
+    touchX = null;
+  });
+
+  update();
+})();
+</script>
 
 </body>
 </html>
